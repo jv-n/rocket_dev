@@ -1,5 +1,5 @@
 from pydantic import BaseModel, ConfigDict, Field
-
+from typing import Optional
 
 class VendedorBase(BaseModel):
     nome_vendedor: str

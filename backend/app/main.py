@@ -5,7 +5,7 @@ from app.routers import (
     consumidores,
     vendedores,
     avaliacoes_pedido,
-    itens_pedido
+    itens_pedidos
 
 )
 
@@ -20,7 +20,7 @@ app.include_router(produtos.router)
 app.include_router(consumidores.router)
 app.include_router(vendedores.router)
 app.include_router(avaliacoes_pedido.router)
-app.include_router(itens_pedido.router)
+app.include_router(itens_pedidos.router)
 
 @app.get("/", tags=["Health"])
 def health_check():

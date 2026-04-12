@@ -14,6 +14,10 @@ class AvaliacaoPedidoBase(BaseModel):
 class AvaliacaoPedidoCreate(AvaliacaoPedidoBase):
     pass
 
+class AvaliacaoPedidoUpdate(BaseModel):
+    avaliacao: Optional[int] = Field(None, ge=1, le=5)
+    titulo_comentario: Optional[str] = None
+    comentario: Optional[str] = None
 
 class AvaliacaoPedidoResponse(AvaliacaoPedidoBase):
     model_config = ConfigDict(from_attributes=True)

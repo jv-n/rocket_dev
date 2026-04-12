@@ -15,6 +15,14 @@ class ProdutoBase(BaseModel):
 class ProdutoCreate(ProdutoBase):
     pass
 
+class ProdutoUpdate(BaseModel):
+    nome_produto: Optional[str] = None
+    categoria_produto: Optional[str] = None
+    peso_produto_gramas: Optional[float] = None
+    comprimento_centimetros: Optional[float] = None
+    altura_centimetros: Optional[float] = None
+    largura_centimetros: Optional[float] = None
+
 
 class ProdutoResponse(ProdutoBase):
     model_config = ConfigDict(from_attributes=True)

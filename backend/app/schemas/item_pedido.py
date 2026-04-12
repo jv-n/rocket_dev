@@ -12,6 +12,9 @@ class ItemPedidoBase(BaseModel):
 class ItemPedidoCreate(ItemPedidoBase):
     pass
 
+class ItemPedidoUpdate(BaseModel):
+    preco_BRL: Optional[float] = Field(None, gt=0)
+    preco_frete: Optional[float] = Field(None, ge=0)
 
 class ItemPedidoResponse(ItemPedidoBase):
     model_config = ConfigDict(from_attributes=True)

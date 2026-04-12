@@ -11,6 +11,11 @@ class VendedorBase(BaseModel):
 class VendedorCreate(VendedorBase):
     pass
 
+class VendedorUpdate(BaseModel):
+    nome_vendedor: Optional[str] = None
+    prefixo_cep: Optional[str] = Field(None, max_length=10)
+    cidade: Optional[str] = None
+    estado: Optional[str] = Field(None, max_length=2)
 
 class VendedorResponse(VendedorBase):
     model_config = ConfigDict(from_attributes=True)

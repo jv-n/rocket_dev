@@ -19,6 +19,15 @@ class PedidoBase(BaseModel):
 class PedidoCreate(PedidoBase):
     pass
 
+class PedidoUpdate(BaseModel):
+    status: Optional[str] = None
+    pedido_compra_timestamp: Optional[datetime] = None
+    pedido_entregue_timestamp: Optional[datetime] = None
+    data_estimada_entrega: Optional[date] = None
+    tempo_entrega_dias: Optional[float] = None
+    tempo_entrega_estimado_dias: Optional[float] = None
+    diferenca_entrega_dias: Optional[float] = None
+    entrega_no_prazo: Optional[str] = None
 
 class PedidoResponse(PedidoBase):
     model_config = ConfigDict(from_attributes=True)

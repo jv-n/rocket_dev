@@ -2,33 +2,27 @@ import csv
 import uuid
 from app.database import SessionLocal, engine, Base
 from app.models import (
-    Produto,
-    Vendedor,
-    Consumidor,
-    Pedido,
-    ItemPedido,
-    AvaliacaoPedido,
-    CategoriaImagem,
+    Product,
+    Seller,
+    Customer,
+    Order,
+    OrderItem,
+    OrderReview,
+    ImageCategory,
 )
 from sqlalchemy import text
 from datetime import datetime, date
 
 Base.metadata.create_all(bind=engine)
 
-FLOAT_COLS_PROD = {"peso_produto_gramas", "comprimento_centimetros", "altura_centimetros", "largura_centimetros"}
-FLOAT_COLS_PEDIDO = {"tempo_entrega_dias", "tempo_entrega_estimado_dias", "diferenca_entrega_dias"}
-FLOAT_COLS_ITEM = {"preco_BRL", "preco_frete"}
-DATETIME_COLS_PEDIDO = {"pedido_compra_timestamp", "pedido_entregue_timestamp"}
-DATE_COLS_PEDIDO = {"data_estimada_entrega"}
-DATETIME_COLS_AVALIACAO = {"data_comentario", "data_resposta"}
-NULLABLE_STR_COLS_AVALIACAO = {"titulo_comentario", "comentario"}
+FLOAT_COLS_PRODUCT = {"weight_grams", "length_cm", "height_cm", "width_cm"}
+FLOAT_COLS_ORDER = {"delivery_days", "estimated_delivery_days", "delivery_days_diff"}
+FLOAT_COLS_ORDER_ITEM = {"price_brl", "freight_price"}
+DATETIME_COLS_ORDER = {"purchase_timestamp", "delivered_timestamp"}
+DATE_COLS_ORDER = {"estimated_delivery_date"}
+DATETIME_COLS_REVIEW = {"comment_date", "response_date"}
+NULLABLE_STR_COLS_REVIEW = {"comment_title", "comment"}
 
-def clean_row(row: dict, float_cols: set) -> dict:
-    """Convert empty strings to None for float columns."""
-    return {
-        k: (None if k in float_cols and v == "" else v)
-        for k, v in row.items()
-    }
 
 def parse_datetime(v: str) -> datetime | None:
     if not v:
@@ -38,6 +32,7 @@ def parse_datetime(v: str) -> datetime | None:
     except ValueError:
         return None
 
+
 def parse_date(v: str) -> date | None:
     if not v:
         return None
@@ -45,7 +40,8 @@ def parse_date(v: str) -> date | None:
         return datetime.strptime(v, "%Y-%m-%d").date()
     except ValueError:
         return None
-        
+
+
 def clean_row(row: dict, float_cols: set = set(), datetime_cols: set = set(),
               date_cols: set = set(), nullable_str_cols: set = set()) -> dict:
     result = {}
@@ -62,85 +58,156 @@ def clean_row(row: dict, float_cols: set = set(), datetime_cols: set = set(),
             result[k] = v
     return result
 
+
+# Column name mappings from CSV (portuguese) to model fields (english)
+SELLER_MAP = {
+    "id_vendedor": "seller_id",
+    "nome_vendedor": "name",
+    "prefixo_cep": "zip_prefix",
+    "cidade": "city",
+    "estado": "state",
+}
+
+CUSTOMER_MAP = {
+    "id_consumidor": "customer_id",
+    "prefixo_cep": "zip_prefix",
+    "nome_consumidor": "name",
+    "cidade": "city",
+    "estado": "state",
+}
+
+PRODUCT_MAP = {
+    "id_produto": "product_id",
+    "nome_produto": "name",
+    "categoria_produto": "category",
+    "peso_produto_gramas": "weight_grams",
+    "comprimento_centimetros": "length_cm",
+    "altura_centimetros": "height_cm",
+    "largura_centimetros": "width_cm",
+}
+
+ORDER_MAP = {
+    "id_pedido": "order_id",
+    "id_consumidor": "customer_id",
+    "status": "status",
+    "pedido_compra_timestamp": "purchase_timestamp",
+    "pedido_entregue_timestamp": "delivered_timestamp",
+    "data_estimada_entrega": "estimated_delivery_date",
+    "tempo_entrega_dias": "delivery_days",
+    "tempo_entrega_estimado_dias": "estimated_delivery_days",
+    "diferenca_entrega_dias": "delivery_days_diff",
+    "entrega_no_prazo": "on_time_delivery",
+}
+
+ORDER_ITEM_MAP = {
+    "id_pedido": "order_id",
+    "id_item": "item_id",
+    "id_produto": "product_id",
+    "id_vendedor": "seller_id",
+    "preco_BRL": "price_brl",
+    "preco_frete": "freight_price",
+}
+
+ORDER_REVIEW_MAP = {
+    "id_avaliacao": "review_id",
+    "id_pedido": "order_id",
+    "avaliacao": "rating",
+    "titulo_comentario": "comment_title",
+    "comentario": "comment",
+    "data_comentario": "comment_date",
+    "data_resposta": "response_date",
+}
+
+IMAGE_CATEGORY_MAP = {
+    "nome_categoria": "category_name",
+    "url_imagem": "image_url",
+}
+
+
+def remap(row: dict, mapping: dict) -> dict:
+    return {mapping[k]: v for k, v in row.items() if k in mapping}
+
+
 db = SessionLocal()
 
 with db:
-    db.execute(text("DELETE FROM avaliacoes_pedidos"))
-    db.execute(text("DELETE FROM itens_pedidos"))
-    db.execute(text("DELETE FROM pedidos"))
-    db.execute(text("DELETE FROM consumidores"))
-    db.execute(text("DELETE FROM vendedores"))
-    db.execute(text("DELETE FROM produtos"))
-    db.execute(text("DELETE FROM categoria_imagens"))
+    db.execute(text("DELETE FROM order_reviews"))
+    db.execute(text("DELETE FROM order_items"))
+    db.execute(text("DELETE FROM orders"))
+    db.execute(text("DELETE FROM customers"))
+    db.execute(text("DELETE FROM sellers"))
+    db.execute(text("DELETE FROM products"))
+    db.execute(text("DELETE FROM image_categories"))
     db.commit()
     print("Cleared all tables")
 
-# Seed Vendedores
+# Seed Sellers
 with open("data/dim_vendedores.csv", newline="", encoding="utf-8") as f:
     reader = csv.DictReader(f)
-    vendedores = [Vendedor(**row) for row in reader]
-    db.add_all(vendedores)
+    sellers = [Seller(**remap(row, SELLER_MAP)) for row in reader]
+    db.add_all(sellers)
     db.commit()
-    print(f"Inserted {len(vendedores)} vendedores")
+    print(f"Inserted {len(sellers)} sellers")
 
-# Seed Consumidores
+# Seed Customers
 with open("data/dim_consumidores.csv", newline="", encoding="utf-8") as f:
     reader = csv.DictReader(f)
-    consumidores = [Consumidor(**row) for row in reader]
-    db.add_all(consumidores)
+    customers = [Customer(**remap(row, CUSTOMER_MAP)) for row in reader]
+    db.add_all(customers)
     db.commit()
-    print(f"Inserted {len(consumidores)} consumidores")
+    print(f"Inserted {len(customers)} customers")
 
-# Seed Produtos
+# Seed Products
 with open("data/dim_produtos.csv", newline="", encoding="utf-8") as f:
     reader = csv.DictReader(f)
-    produtos = [Produto(**clean_row(row, FLOAT_COLS_PROD)) for row in reader]
-    db.add_all(produtos)
+    products = [Product(**clean_row(remap(row, PRODUCT_MAP), FLOAT_COLS_PRODUCT)) for row in reader]
+    db.add_all(products)
     db.commit()
-    print(f"Inserted {len(produtos)} produtos")
+    print(f"Inserted {len(products)} products")
 
-# Seed Pedidos
+# Seed Orders
 with open("data/fat_pedidos.csv", newline="", encoding="utf-8") as f:
     reader = csv.DictReader(f)
-    pedidos = [
-        Pedido(**clean_row(row, float_cols=FLOAT_COLS_PEDIDO,
-                           datetime_cols=DATETIME_COLS_PEDIDO,
-                           date_cols=DATE_COLS_PEDIDO))
+    orders = [
+        Order(**clean_row(remap(row, ORDER_MAP), float_cols=FLOAT_COLS_ORDER,
+                          datetime_cols=DATETIME_COLS_ORDER,
+                          date_cols=DATE_COLS_ORDER))
         for row in reader
     ]
-    db.add_all(pedidos)
+    db.add_all(orders)
     db.commit()
-    print(f"Inserted {len(pedidos)} pedidos")
+    print(f"Inserted {len(orders)} orders")
 
-# Seed Itens de Pedido
+# Seed Order Items
 with open("data/fat_itens_pedidos.csv", newline="", encoding="utf-8") as f:
     reader = csv.DictReader(f)
-    itens = [ItemPedido(**clean_row(row, float_cols=FLOAT_COLS_ITEM)) for row in reader]
-    db.add_all(itens)
+    order_items = [OrderItem(**clean_row(remap(row, ORDER_ITEM_MAP), float_cols=FLOAT_COLS_ORDER_ITEM)) for row in reader]
+    db.add_all(order_items)
     db.commit()
-    print(f"Inserted {len(itens)} itens de pedido")
+    print(f"Inserted {len(order_items)} order items")
 
-# Seed Avaliações
+# Seed Order reviews
 with open("data/fat_avaliacoes_pedidos.csv", newline="", encoding="utf-8") as f:
     reader = csv.DictReader(f)
     seen_ids = set()
-    avaliacoes = []
+    reviews = []
     for row in reader:
-        if row["id_avaliacao"] in seen_ids:
-            row["id_avaliacao"] = uuid.uuid4().hex 
-        seen_ids.add(row["id_avaliacao"])
-        avaliacoes.append(
-            AvaliacaoPedido(**clean_row(row, datetime_cols=DATETIME_COLS_AVALIACAO,
-                                       nullable_str_cols=NULLABLE_STR_COLS_AVALIACAO))
+        mapped = remap(row, ORDER_REVIEW_MAP)
+        if mapped["review_id"] in seen_ids:
+            mapped["review_id"] = uuid.uuid4().hex
+        seen_ids.add(mapped["review_id"])
+        reviews.append(
+            OrderReview(**clean_row(mapped, datetime_cols=DATETIME_COLS_REVIEW,
+                                    nullable_str_cols=NULLABLE_STR_COLS_REVIEW))
         )
-    db.add_all(avaliacoes)
+    db.add_all(reviews)
     db.commit()
-    print(f"Inserted {len(avaliacoes)} avaliações")
+    print(f"Inserted {len(reviews)} order reviews")
 
-#Seed Categoria Imagens
+# Seed Image Categories
 with open("data/dim_categoria_imagens.csv", newline="", encoding="utf-8") as f:
     reader = csv.DictReader(f)
-    categorias = [CategoriaImagem(**row) for row in reader]
-    db.add_all(categorias)
+    image_categories = [ImageCategory(**remap(row, IMAGE_CATEGORY_MAP)) for row in reader]
+    db.add_all(image_categories)
     db.commit()
-    print(f"Inserted {len(categorias)} categorias de imagens")
+    print(f"Inserted {len(image_categories)} image categories")

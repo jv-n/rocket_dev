@@ -54,6 +54,15 @@ alembic upgrade head
 
 Este comando lê os arquivos dentro de `alembic/versions/` e cria todas as tabelas no banco.
 
+### Povoar o banco
+1. Adicione um diretório **```data```** a raiz do backend
+2. Adicione os arquivos **.csv** ao diretório ```data```
+
+Rode o script no terminal: 
+```bash
+python seed.py
+```
+
 ### Ver o estado atual
 
 ```bash

@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.database import get_db
@@ -6,6 +7,13 @@ from app.models.order_item import OrderItem
 from app.schemas.order_item import OrderItemCreate, OrderItemUpdate, OrderItemResponse
 
 router = APIRouter(prefix="/order_items", tags=["OrderItems"])
+
+
+# GET /order_items/total-revenue
+@router.get("/total-revenue")
+def get_total_revenue(db: Session = Depends(get_db)):
+    total = db.query(func.sum(OrderItem.price_brl)).scalar() or 0.0
+    return {"total_revenue": round(total, 2)}
 
 
 # GET /order_items/{order_id}/{item_id}
@@ -23,6 +31,12 @@ def list_order_items(order_id: str | None = None, skip: int = 0, limit: int = 10
     items = db.query(OrderItem)
     if order_id:
         items = items.filter(OrderItem.order_id == order_id)
+    return items.offset(skip).limit(limit).all()
+
+#GET /order_items?product_id=...
+@router.get("/by_product/", response_model=list[OrderItemResponse])
+def list_order_items_by_product(product_id: str, skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
+    items = db.query(OrderItem).filter(OrderItem.product_id == product_id)
     return items.offset(skip).limit(limit).all()
 
 

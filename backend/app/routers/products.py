@@ -1,9 +1,11 @@
 from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.database import get_db
+from app.models.order_item import OrderItem
 from app.models.product import Product
-from app.schemas.product import ProductCreate, ProductUpdate, ProductResponse
+from app.schemas.product import BestSellingProductResponse, ProductCreate, ProductUpdate, ProductResponse
 
 router = APIRouter(prefix="/products", tags=["Products"])
 
@@ -22,6 +24,31 @@ def list_products(category: str | None = None, skip: int = 0, limit: int = 100, 
     if category:
         products = products.filter(Product.category == category)
     return products.offset(skip).limit(limit).all()
+
+
+# GET /products/best-selling?limit=10
+@router.get("/best-selling", response_model=list[BestSellingProductResponse])
+def best_selling_products(limit: int = 10, db: Session = Depends(get_db)):
+    rows = (
+        db.query(
+            Product,
+            func.count(OrderItem.order_id).label("orders_count"),
+            func.sum(OrderItem.price_brl).label("total_revenue"),
+        )
+        .join(OrderItem, Product.product_id == OrderItem.product_id)
+        .group_by(Product.product_id)
+        .order_by(func.count(OrderItem.order_id).desc())
+        .limit(limit)
+        .all()
+    )
+    return [
+        BestSellingProductResponse(
+            **product.__dict__,
+            orders_count=orders_count,
+            total_revenue=round(total_revenue, 2),
+        )
+        for product, orders_count, total_revenue in rows
+    ]
 
 
 # GET /products/{product_id}

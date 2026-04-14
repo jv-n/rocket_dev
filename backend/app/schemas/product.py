@@ -29,3 +29,8 @@ class ProductResponse(ProductBase):
     model_config = ConfigDict(from_attributes=True)
 
     product_id: str
+
+
+class BestSellingProductResponse(ProductResponse):
+    orders_count: int
+    total_revenue: float

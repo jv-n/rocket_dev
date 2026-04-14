@@ -1,4 +1,5 @@
 import ProductDialogEdit from "@/components/molecules/ProductDialog/productDialogEdit";
+import { Button } from "@/components/atoms/Button/button";
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 
@@ -36,25 +37,44 @@ const API_BASE = "http://localhost:8000";
 
 export default function Product() {
 
+  const REVIEWS_PAGE_SIZE = 5;
+
   const { id } = useParams();
   const [product, setProduct] = useState<Product | null>(null);
   const [sales, setSales] = useState<Product_sales | null>(null);
   const [reviews, setReviews] = useState<Product_review[]>([]);
+  const [reviewsSkip, setReviewsSkip] = useState(0);
+  const [reviewsLoading, setReviewsLoading] = useState(false);
+  const [reviewsHasMore, setReviewsHasMore] = useState(true);
   const [image, setImage] = useState<ImageCategory | null>(null);
 
   useEffect(() => {
     async function fetchData() {
-      const [productRes, salesRes, reviewsRes] = await Promise.all([
+      const [productRes, salesRes] = await Promise.all([
         fetch(`${API_BASE}/products/${id}`).then((res) => res.json()),
         fetch(`${API_BASE}/products/${id}/sales`).then((res) => res.json()),
-        fetch(`${API_BASE}/order_reviews/by_product/?product_id=${id}`).then((res) => res.json()),
       ]);
       setProduct(productRes);
       setSales(salesRes);
-      setReviews(reviewsRes);
     }
     fetchData();
   }, [id]);
+
+  useEffect(() => {
+    async function fetchReviews() {
+      setReviewsLoading(true);
+      try {
+        const data: Product_review[] = await fetch(
+          `${API_BASE}/order_reviews/by_product/?product_id=${id}&skip=${reviewsSkip}&limit=${REVIEWS_PAGE_SIZE}`
+        ).then((res) => res.json());
+        setReviews((prev) => reviewsSkip === 0 ? data : [...prev, ...data]);
+        setReviewsHasMore(data.length === REVIEWS_PAGE_SIZE);
+      } finally {
+        setReviewsLoading(false);
+      }
+    }
+    fetchReviews();
+  }, [id, reviewsSkip]);
 
   useEffect(
     () => {
@@ -124,6 +144,15 @@ export default function Product() {
                 {review.comment && <p><span className="font-medium">Comentário:</span> {review.comment}</p>}
               </div>
             ))}
+            {reviewsLoading && <p className="text-sm text-muted-foreground text-center">Carregando...</p>}
+            {!reviewsLoading && reviewsHasMore && (
+              <Button variant="outline" onClick={() => setReviewsSkip((prev) => prev + REVIEWS_PAGE_SIZE)}>
+                Carregar mais
+              </Button>
+            )}
+            {!reviewsLoading && !reviewsHasMore && (
+              <p className="text-sm text-muted-foreground text-center">Todas as avaliações foram carregadas.</p>
+            )}
           </div>
         ) : (
           <p>Nenhuma avaliação encontrada para este produto.</p>

@@ -1,6 +1,7 @@
 import uuid
 
 from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy import exists
 from sqlalchemy.orm import Session
 
 from app.database import get_db
@@ -31,10 +32,11 @@ def list_reviews(order_id: str | None = None, skip: int = 0, limit: int = 100, d
 #GET /order_reviews/by_product?product_id=...
 @router.get("/by_product/", response_model=list[OrderReviewResponse])
 def list_reviews_by_product(product_id: str, skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
-    reviews = (
-        db.query(OrderReview)
-        .join(OrderItem, OrderReview.order_id == OrderItem.order_id)
-        .filter(OrderItem.product_id == product_id)
+    reviews = db.query(OrderReview).filter(
+        exists().where(
+            (OrderItem.order_id == OrderReview.order_id) &
+            (OrderItem.product_id == product_id)
+        )
     )
     return reviews.offset(skip).limit(limit).all()
 

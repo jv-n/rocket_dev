@@ -9,8 +9,8 @@ from app.schemas.order_item import OrderItemCreate, OrderItemUpdate, OrderItemRe
 router = APIRouter(prefix="/order_items", tags=["OrderItems"])
 
 
-# GET /order_items/total-revenue
-@router.get("/total-revenue")
+# GET /order_items/total_revenue
+@router.get("/total_revenue")
 def get_total_revenue(db: Session = Depends(get_db)):
     total = db.query(func.sum(OrderItem.price_brl)).scalar() or 0.0
     return {"total_revenue": round(total, 2)}

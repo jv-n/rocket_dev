@@ -1,3 +1,5 @@
+import uuid
+
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
@@ -27,7 +29,7 @@ def list_sellers(skip: int = 0, limit: int = 100, db: Session = Depends(get_db))
 # POST /sellers
 @router.post("/", response_model=SellerResponse, status_code=201)
 def create_seller(body: SellerCreate, db: Session = Depends(get_db)):
-    seller = Seller(**body.model_dump())
+    seller = Seller(seller_id=uuid.uuid4().hex, **body.model_dump())
     db.add(seller)
     db.commit()
     db.refresh(seller)

@@ -1,3 +1,5 @@
+import uuid
+
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
@@ -27,7 +29,7 @@ def list_orders(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
 # POST /orders
 @router.post("/", response_model=OrderResponse, status_code=201)
 def create_order(body: OrderCreate, db: Session = Depends(get_db)):
-    order = Order(**body.model_dump())
+    order = Order(order_id=uuid.uuid4().hex, **body.model_dump())
     db.add(order)
     db.commit()
     db.refresh(order)

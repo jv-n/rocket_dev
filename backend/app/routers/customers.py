@@ -1,3 +1,5 @@
+import uuid
+
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
@@ -27,7 +29,7 @@ def list_customers(skip: int = 0, limit: int = 100, db: Session = Depends(get_db
 # POST /customers
 @router.post("/", response_model=CustomerResponse, status_code=201)
 def create_customer(body: CustomerCreate, db: Session = Depends(get_db)):
-    customer = Customer(**body.model_dump())
+    customer = Customer(customer_id=uuid.uuid4().hex, **body.model_dump())
     db.add(customer)
     db.commit()
     db.refresh(customer)

@@ -1,9 +1,12 @@
+import uuid
+
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.models.order_review import OrderReview
 from app.schemas.order_review import OrderReviewCreate, OrderReviewUpdate, OrderReviewResponse
+from app.models.order_item import OrderItem
 
 router = APIRouter(prefix="/order_reviews", tags=["OrderReviews"])
 
@@ -25,11 +28,21 @@ def list_reviews(order_id: str | None = None, skip: int = 0, limit: int = 100, d
         reviews = reviews.filter(OrderReview.order_id == order_id)
     return reviews.offset(skip).limit(limit).all()
 
+#GET /order_reviews/by_product?product_id=...
+@router.get("/by_product/", response_model=list[OrderReviewResponse])
+def list_reviews_by_product(product_id: str, skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
+    reviews = (
+        db.query(OrderReview)
+        .join(OrderItem, OrderReview.order_id == OrderItem.order_id)
+        .filter(OrderItem.product_id == product_id)
+    )
+    return reviews.offset(skip).limit(limit).all()
+
 
 # POST /order_reviews
 @router.post("/", response_model=OrderReviewResponse, status_code=201)
 def create_review(body: OrderReviewCreate, db: Session = Depends(get_db)):
-    review = OrderReview(**body.model_dump())
+    review = OrderReview(review_id=uuid.uuid4().hex, **body.model_dump())
     db.add(review)
     db.commit()
     db.refresh(review)

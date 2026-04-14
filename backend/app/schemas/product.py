@@ -34,3 +34,10 @@ class ProductResponse(ProductBase):
 class BestSellingProductResponse(ProductResponse):
     orders_count: int
     total_revenue: float
+
+
+class ProductSalesResponse(BaseModel):
+    product_id: str
+    orders_count: int
+    total_revenue: float
+    total_freight: float

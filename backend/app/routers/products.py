@@ -1,3 +1,5 @@
+import uuid
+
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import func
 from sqlalchemy.orm import Session
@@ -5,7 +7,7 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models.order_item import OrderItem
 from app.models.product import Product
-from app.schemas.product import BestSellingProductResponse, ProductCreate, ProductUpdate, ProductResponse
+from app.schemas.product import BestSellingProductResponse, ProductCreate, ProductUpdate, ProductResponse, ProductSalesResponse
 
 router = APIRouter(prefix="/products", tags=["Products"])
 
@@ -16,6 +18,11 @@ def search_products(query: str, skip: int = 0, limit: int = 100, db: Session = D
     products = db.query(Product).filter(Product.name.contains(query)).offset(skip).limit(limit).all()
     return products
 
+#GET /products/count
+@router.get("/count")
+def count_products(db: Session = Depends(get_db)):
+    total = db.query(func.count(Product.product_id)).scalar() or 0
+    return {"total_products": total}
 
 # GET /products?category=...
 @router.get("/", response_model=list[ProductResponse])
@@ -51,6 +58,29 @@ def best_selling_products(limit: int = 10, db: Session = Depends(get_db)):
     ]
 
 
+# GET /products/{product_id}/sales
+@router.get("/{product_id}/sales", response_model=ProductSalesResponse)
+def get_product_sales(product_id: str, db: Session = Depends(get_db)):
+    product = db.get(Product, product_id)
+    if not product:
+        raise HTTPException(status_code=404, detail="Product not found")
+    row = (
+        db.query(
+            func.count(OrderItem.order_id).label("orders_count"),
+            func.sum(OrderItem.price_brl).label("total_revenue"),
+            func.sum(OrderItem.freight_price).label("total_freight"),
+        )
+        .filter(OrderItem.product_id == product_id)
+        .one()
+    )
+    return ProductSalesResponse(
+        product_id=product_id,
+        orders_count=row.orders_count or 0,
+        total_revenue=round(row.total_revenue or 0, 2),
+        total_freight=round(row.total_freight or 0, 2),
+    )
+
+
 # GET /products/{product_id}
 @router.get("/{product_id}", response_model=ProductResponse)
 def get_product(product_id: str, db: Session = Depends(get_db)):
@@ -63,7 +93,7 @@ def get_product(product_id: str, db: Session = Depends(get_db)):
 # POST /products
 @router.post("/", response_model=ProductResponse, status_code=201)
 def create_product(body: ProductCreate, db: Session = Depends(get_db)):
-    product = Product(**body.model_dump())
+    product = Product(product_id=uuid.uuid4().hex, **body.model_dump())
     db.add(product)
     db.commit()
     db.refresh(product)

@@ -8,6 +8,7 @@ from app.routers import (
     order_reviews,
     order_items,
     image_categories,
+    agent_router
 )
 
 app = FastAPI(
@@ -30,7 +31,7 @@ app.include_router(sellers.router)
 app.include_router(order_reviews.router)
 app.include_router(order_items.router)
 app.include_router(image_categories.router)
-
+app.include_router(agent_router.router)
 
 @app.get("/", tags=["Health"])
 def health_check():

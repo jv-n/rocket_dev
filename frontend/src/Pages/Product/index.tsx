@@ -2,6 +2,7 @@ import ProductDialogEdit from "@/components/molecules/ProductDialog/productDialo
 import { Button } from "@/components/atoms/Button/button";
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
+import RemoveDialog from "@/components/molecules/RemoveDialog/removeDialog";
 
 type Product = {
   product_id: string;
@@ -47,6 +48,14 @@ export default function Product() {
   const [reviewsLoading, setReviewsLoading] = useState(false);
   const [reviewsHasMore, setReviewsHasMore] = useState(true);
   const [image, setImage] = useState<ImageCategory | null>(null);
+
+  function removeProduct() {
+    fetch(`${API_BASE}/products/${id}`, {
+      method: "DELETE",
+    }).then(() => {
+      window.location.href = "/products";
+    });
+  }
 
   useEffect(() => {
     async function fetchData() {
@@ -96,14 +105,17 @@ export default function Product() {
       <div>
         <div className="flex flex-row justify-between items-center">
           <h2 className="font-semibold text-lg">Detalhes</h2>
-            {product && <ProductDialogEdit 
+            {product && <div className="flex flex-row items-center gap-2">
+              <ProductDialogEdit 
               productId={product.product_id} 
               initialName={product.name} 
               initialCategory={product.category} 
               initialWeight={product.weight_grams} 
               initialLength={product.length_cm} 
               initialWidth={product.width_cm} 
-              initialHeight={product.height_cm} />}
+              initialHeight={product.height_cm} />
+              <RemoveDialog title="Remover produto" description="Tem certeza de que deseja remover este produto?" triggerText="Remover" onConfirm={removeProduct}/>
+            </div>}
         </div>
         {product ? (
           <div className="flex flex-row justify-center items-center gap-2 mt-2 p-4 border rounded-md bg-white shadow-sm">

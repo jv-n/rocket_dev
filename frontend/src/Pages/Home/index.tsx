@@ -1,4 +1,5 @@
 import CardDash from "@/components/molecules/CardDash/cardDash";
+import ChatWidget from "@/components/molecules/ChatWidget/chatWidget";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
@@ -27,8 +28,6 @@ export default function Home() {
       .then((res) => res.json())
       .then((data: Product[]) => setProducts(data));
   }, []);
-
-  
 
   const currentDate = new Date().toString().split(" ").slice(1, 4).join(" ");
 
@@ -61,6 +60,7 @@ export default function Home() {
           </div>
         ))}
       </div>
+      <ChatWidget />
     </div>
   )
 }
